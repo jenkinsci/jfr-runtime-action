@@ -1,0 +1,38 @@
+name: Jenkinsfile-runner actions CI
+on: [push]
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    name: syntax-check
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master      
+  jenkins-runtime-pipeline:
+    # Run all the actions in the on demand VM.
+    needs: syntax-check
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]    
+    runs-on: ${{ matrix.os }}
+    name: jenkins-runtime-pipeline-test
+    steps:
+      - uses: actions/checkout@v2
+      - name : Setup Jenkins
+        uses:
+          Cr1t-GYM/jenkins-action-poc/jenkins-setup@master
+      - name: Jenkins plugins download
+        id: jenkins_plugins_download
+        uses:
+          Cr1t-GYM/jenkins-action-poc/jenkins-plugin-installation-action@master
+        with:
+          pluginstxt: jenkins-setup/plugins.txt
+      - name: Run Jenkins pipeline
+        id: run_jenkins_pipeline
+        uses:
+          ./
+        with:
+          command: run
+          jenkinsfile: Jenkinsfile
+          jcasc: jcasc.yml
+          initHook: groovy.init.d
